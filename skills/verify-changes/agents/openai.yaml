@@ -1,4 +1,0 @@
-interface:
-  display_name: "Verify Changes"
-  short_description: "Choose deterministic verification for changes"
-  default_prompt: "Use $verify-changes to decide how to verify the changes I made."
