@@ -1,0 +1,4 @@
+interface:
+  display_name: "Env Vars Are Config"
+  short_description: "Keep env vars for environment-specific config"
+  default_prompt: "Use $env-vars-are-config to review whether this configuration belongs in env vars, CLI flags, arguments, or code flags."
