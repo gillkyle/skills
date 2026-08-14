@@ -1,13 +1,22 @@
 ---
 name: show-me
-description: Replace prose-heavy explanations with compact visual artifacts such as Mermaid diagrams, component trees, call stacks, state flows, file layouts, pseudocode, type signatures, diffs, and live HTML explainers. Use when the user invokes /show-me or $show-me, asks to see work visually, wants a route or feature previewed, or needs a visual explanation of code, architecture, behavior, or a change. For live previews, use Codex's built-in in-app Browser, take and show screenshots, and leave the final preview tab open.
+description: Replace prose-heavy explanations with compact visual artifacts such as Mermaid diagrams, component trees, call stacks, state flows, file layouts, pseudocode, type signatures, diffs, and live HTML explainers. Use when the user invokes /show-me or $show-me, asks to see work visually, wants a route or feature previewed, or needs a visual explanation of code, architecture, behavior, or a change. Works across Codex, Claude Code, T3 Code, Cursor, and similar agent hosts by selecting the host's provider adapter.
 ---
 
 # Show Me
 
 Use visuals as the primary conversation surface. Keep surrounding prose short, concrete, and conversational.
 
-## Start with the smallest useful visual
+## Operating model
+
+1. Apply the provider-neutral rules below.
+2. Identify the actual host and provider. T3 Code is a host/orchestrator; choose the underlying provider first, then apply the T3 overlay.
+3. Follow exactly one provider adapter. Use only capabilities that are actually exposed in the current session.
+4. Report the evidence level honestly: `code-shaped`, `browser-verified`, or `screenshot proof`.
+
+## Provider-neutral rules
+
+### Start with the smallest useful visual
 
 Lead with one visual, then add only the context needed to read it:
 
@@ -16,69 +25,69 @@ Lead with one visual, then add only the context needed to read it:
 - **Backend or orchestration:** a call stack or typed pseudocode showing the important boundaries.
 - **Data or API design:** TypeScript-like interfaces and function signatures before implementation details.
 - **A focused change:** a diff-shaped summary showing what moves, appears, disappears, or changes state.
-- **UI or interaction design:** a self-contained HTML explainer or the actual running page in the browser.
+- **UI or interaction design:** a self-contained HTML explainer or the actual running page in the available preview surface.
 
-Use real names from the code or request, and mark assumptions and unknowns directly in the visual. Prefer one strong visual over several decorative ones. Do not wrap a diagram in a wall of prose.
+Use real names from the code or request. Mark assumptions and unknowns directly in the visual. Prefer one strong visual over several decorative ones. Do not wrap a diagram in a wall of prose.
 
-If the user invokes `/show-me` without naming a target, use the active request and recent work as the target. Restate the problem simply and show its shape; do not ask the user to repeat context that is already available.
+### Keep the conversation visual
 
-## Keep the conversation visual
+Make progress updates one to three lines long. Show the shape of a complex plan before implementation, then show the final visual state or screenshot after the work. Use text only for decisions, caveats, and evidence the visual cannot carry.
 
-During work, make progress updates one to three lines long. Show the shape of a plan before a complex implementation, then show the final visual state or screenshot after the work. Use text only for decisions, caveats, and evidence that the visual cannot carry.
+### Live preview contract
 
-## Live preview workflow
+Use this workflow whenever the user asks to preview a route, UI, HTML explainer, local app, or finished visual artifact:
 
-Use this workflow when the user asks to preview a route, UI, HTML explainer, local app, or finished visual artifact. A live preview is a required part of the result in those cases.
+1. Identify the exact preview target and URL. Reuse the project's existing dev server and route when one exists. If no app exists, create a small self-contained artifact under `work/show-me/` and serve it over HTTP. Never use a `data:` URL.
+2. Use the current host's native browser or preview surface. Do not substitute an external browser, a guessed tool name, or a different provider's API.
+3. Navigate to the target, wait for the page's meaningful ready signal, inspect the rendered result, and verify the requested route, key text, controls, layout, and relevant console errors.
+4. Take a final screenshot of the stable, user-facing state when the host supports capture. Save it under `work/show-me/`, include it in the final response with an absolute-path Markdown image link, and say what it proves.
+5. Leave the finished preview, server, or session open when the host supports persistence. Never close the deliverable just before handoff.
+6. If the host lacks browser or screenshot capability, do not fabricate browser verification or a screenshot. Return the strongest inline visual available and state the missing capability.
 
-1. Identify the exact preview target and URL. Reuse the project's existing dev server and route when one exists. If an HTML explainer is needed and no app exists, create a small self-contained artifact under the workspace's `work/show-me/` directory and serve it from a localhost HTTP server. Do not use a `data:` URL; Codex's in-app Browser blocks it.
-2. Read and follow the `control-in-app-browser` skill before any browser action. Use only Codex's built-in in-app Browser (`iab`) through the browser-client runtime and the Node REPL. Do not substitute standalone Playwright, Playwright MCP, Computer Use, Chrome, an external browser, or web search.
-3. In a fresh browser runtime, select the in-app Browser exactly as the browser skill specifies and read its complete documentation. When the user asked to see or watch the preview, make the Browser visible:
+## Provider adapters
 
-   ```js
-   await (await iab.capabilities.get("visibility")).set(true)
-   ```
+### Codex App
 
-4. Prefer claiming an already-open in-app tab only when its visible URL exactly matches the preview target. Otherwise create one with `await iab.tabs.new()`. Store and reuse the `iab` and tab bindings across REPL calls; recover a stale tab by creating a fresh tab, not by selecting another browser.
-5. Navigate once to the target. Wait for `domcontentloaded`, then inspect a fresh DOM snapshot. For local apps, reload after code or build changes before taking the final snapshot or screenshot. Use an explicit DOM wait for the page's meaningful ready signal; do not wait on `networkidle` for ordinary local development pages.
-6. Verify the visible result. Check the requested route, key text, controls, layout, and console errors as relevant. Fix actionable failures before presenting the preview. Do not claim browser verification from source inspection alone.
-7. Take at least one final screenshot of the stable, user-facing state. Save it to an absolute path under `work/show-me/` (or the task's existing output directory), and emit the same bytes inline through `nodeRepl.emitImage(...)` so the user can see it during the turn:
+- Read and follow the `control-in-app-browser` skill before any browser action.
+- Use only Codex's built-in in-app Browser (`iab`) through the browser-client runtime and Node REPL. Do not use standalone Playwright, Playwright MCP, Computer Use, Chrome, an external browser, or web search as a substitute.
+- In a fresh browser runtime, make the Browser visible with `await (await iab.capabilities.get("visibility")).set(true)`.
+- Prefer a tab whose visible URL exactly matches the target; otherwise create one with `await iab.tabs.new()`. Navigate once, wait for `domcontentloaded`, then use explicit DOM waits. Do not use `networkidle` for ordinary local pages.
+- Save and emit screenshots with `nodeRepl.emitImage(...)`, then include the saved absolute path in the final Markdown response.
+- Make `tabs.finalize({ keep: [{ tab, status: "deliverable" }] })` the final browser action. Do not close the deliverable tab or perform another browser action afterward.
 
-   ```js
-   var showMeFs = await import("node:fs/promises")
-   var showMePath = await import("node:path")
-   var showMeScreenshotPath = showMePath.resolve(nodeRepl.cwd, "work", "show-me", "final.png")
-   await showMeFs.mkdir(showMePath.dirname(showMeScreenshotPath), { recursive: true })
-   var showMePng = await showMeTab.screenshot({ fullPage: false })
-   await showMeFs.writeFile(showMeScreenshotPath, showMePng)
-   await nodeRepl.emitImage(showMePng)
-   nodeRepl.write(showMeScreenshotPath)
-   ```
+### Claude Code
 
-   In the final response, include the saved image with an absolute-path Markdown link:
+- In Claude Code Desktop, use the built-in Browser/app-preview pane for running apps and localhost routes. Keep the pane visible for handoff.
+- In Claude Code CLI, cloud, or remote sessions, use a configured browser or preview MCP tool when one is available. Discover its actual navigation, inspection, screenshot, and keep/open operations; do not copy Codex's `iab` calls into Claude.
+- Use the available native capture operation, save the bytes under `work/show-me/`, and include an absolute-path Markdown image in the final response. If the current Claude surface can show the preview but cannot export a screenshot, say so explicitly rather than claiming screenshot proof.
+- Leave the preview pane, dev server, and session available when possible. Report the exact URL and whether the preview was left open. Do not invent a tab-finalize API.
 
-   ```md
-   ![Final preview](/absolute/path/to/show-me-final.png)
-   ```
+### Cursor
 
-   Take additional screenshots only for a meaningful second state, responsive breakpoint, or before/after comparison.
-8. Keep the final preview tab open and visible. Never call `showMeTab.close()` for the deliverable. Make `tabs.finalize(...)` the final browser action, keeping the finished tab as a `deliverable`:
+- Use Cursor's native browser/preview or browser tool when exposed in the current Agent session. Use its actual tool names and screenshot operation; never assume Codex's `iab` runtime exists.
+- Keep the preview visible/open when the Cursor surface supports it, save screenshots under `work/show-me/`, and include them in the final response.
+- For Cloud Agents, treat the checked-in project skill and the remote preview URL as the source of truth; do not rely on a local machine-only browser tab.
 
-   ```js
-   await iab.tabs.finalize({
-     keep: [{ tab: showMeTab, status: "deliverable" }],
-   })
-   ```
+### T3 Code
 
-   Do not perform another browser action after finalizing. Omit intermediate tabs from `keep`. Use `handoff` instead of `deliverable` only when the task is intentionally unfinished and the user should continue from the live page.
+- T3 Code is a control plane that can run different providers. Identify whether the thread is using Codex, Claude Code, Cursor, OpenCode, or another provider, then follow that provider adapter.
+- If T3 exposes its own preview/browser automation to the agent, prefer that surface for navigation, inspection, screenshots, and the visible handoff. Use the actual tools exposed by the current thread; do not invent a generic T3 API.
+- Keep the T3 project/thread and its preview surface running. Report the preview URL, the underlying provider, the screenshot path, and whether the preview remains open.
+- If T3 does not expose preview automation in the current thread, fall back to the underlying provider adapter or an inline visual. Do not claim browser verification just because T3 is displaying a project.
+
+### Other hosts
+
+- Use the host's native preview/browser and screenshot capabilities if present.
+- If the host has no live browser, produce a self-contained inline visual or served HTML artifact and label the result `code-shaped` rather than `browser-verified`.
+- Never silently switch providers or browsers to manufacture a stronger evidence level.
 
 ## Screenshot and handoff rules
 
-- If the user asked for screenshots or a website test, include the screenshots in the final Markdown response, not merely in tool output or as bare links.
+- If the user asked for screenshots or a website test, include screenshots in the final Markdown response, not merely tool output or bare links.
 - State what each screenshot proves in one short caption or sentence.
-- Report the exact live URL and whether the tab was left open. Say “tab left open” only after the finalization call succeeds.
-- Separate evidence levels: `code-shaped`, `browser-verified`, and `screenshot proof`. Do not call source-only inspection completed visual verification.
-- If the built-in in-app Browser is unavailable, do not silently fall back to another browser. For a code-only explanation, continue with an inline visual; for a requested live preview, state the blocker clearly and preserve any artifact that was created.
-- If authentication blocks the target, ask the user to sign in in the in-app Browser and tell you when it is ready. Do not bypass login or switch browsers.
+- Report the exact live URL and whether the preview/tab/session was left open. Say “tab left open” only after the host's handoff/finalization operation succeeds.
+- Separate `code-shaped`, `browser-verified`, and `screenshot proof`. Source inspection alone is never browser verification.
+- If authentication blocks the target, ask the user to sign in through the current host's browser/preview and tell you when it is ready. Do not bypass login or switch browsers.
 
 ## Compact response shape
 
@@ -86,7 +95,7 @@ Use this shape unless the user requests another format:
 
 1. The visual artifact first.
 2. One or two sentences explaining the key relationship or change.
-3. A short “Proof” line with the URL, screenshot, and verification level.
+3. A short `Proof` line with the URL, screenshot, and verification level.
 4. At most three follow-up bullets for risks, assumptions, or next actions.
 
 When there is no live page to preview, do not fabricate a browser screenshot. Use Mermaid, a tree, pseudocode, types, or a diff directly in the response and keep the explanation concise.
