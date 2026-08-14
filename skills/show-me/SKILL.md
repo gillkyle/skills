@@ -20,14 +20,37 @@ Use visuals as the primary conversation surface. Keep surrounding prose short, c
 
 Lead with one visual, then add only the context needed to read it:
 
-- **Architecture or ownership:** a shallow file tree or component tree with one responsibility per node.
+- **Architecture or ownership:** a shallow file layout or component tree with one responsibility per node.
+- **Component refactors:** a component tree that keeps the important state hooks, effects, async boundaries, and module boundaries; omit unchanged leaves.
 - **Runtime behavior:** a Mermaid sequence, state, or flow diagram; quote labels that contain punctuation.
-- **Backend or orchestration:** a call stack or typed pseudocode showing the important boundaries.
+- **Backend or orchestration:** a call stack or call tree showing ordered calls, ownership, data/status transitions, and external boundaries.
 - **Data or API design:** TypeScript-like interfaces and function signatures before implementation details.
-- **A focused change:** a diff-shaped summary showing what moves, appears, disappears, or changes state.
-- **UI or interaction design:** a self-contained HTML explainer or the actual running page in the available preview surface.
+- **Algorithmic behavior:** concise pseudocode with inputs, branching, mutation, and termination visible.
+- **A focused change or review:** diff syntax showing what moves, appears, disappears, or changes state.
+- **UI or interaction design:** a lightweight HTML mockup, HTML diagram/explainer, or the actual running page in the available preview surface.
 
 Use real names from the code or request. Mark assumptions and unknowns directly in the visual. Prefer one strong visual over several decorative ones. Do not wrap a diagram in a wall of prose.
+
+### Choose the smallest shape that answers the question
+
+Default to lightweight inline visuals—trees, call stacks, Mermaid, types, pseudocode, and diff syntax. Escalate to HTML when interaction, layout, visual hierarchy, or a live preview is the thing being evaluated.
+
+Use this menu:
+
+- **“Where does this live?”** → shallow file layout with one-line responsibilities.
+- **“What renders or owns state?”** → component tree with state hooks and module boundaries.
+- **“What calls what?”** → call stack for one path; call tree for branching orchestration.
+- **“What happens over time?”** → sequence diagram for participants; state diagram for lifecycle states.
+- **“What is the code shape?”** → interfaces, types, signatures, and pseudocode.
+- **“What changed?”** → diff syntax, including component-tree diffs, call-tree diffs, file-layout diffs, and state/control-flow diffs.
+- **“What will it look or feel like?”** → HTML mockup or live page.
+- **“What concept needs explaining?”** → HTML diagram/explainer when a static tree or Mermaid diagram is not enough.
+
+For diff syntax, show only the changed shape with `+` and `-` markers even when most of the implementation is unchanged. Keep call stacks and trees shallow enough to scan; expand only the boundary that matters.
+
+### Use `/show-me` for alignment before and after coding
+
+Use the active request and recent work when `/show-me` has no named target; do not ask the user to repeat context that is already available. Before implementation, show the types, signatures, component tree, call stack, or state shape that the agent is about to build. After implementation, use the same shape to explain the result and use a diff-shaped visual to focus a large change or review.
 
 ### Keep the conversation visual
 
