@@ -13,6 +13,7 @@ Use visuals as the primary conversation surface. Keep surrounding prose short, c
 2. Identify the actual host and provider. T3 Code is a host/orchestrator; choose the underlying provider first, then apply the T3 overlay.
 3. Follow exactly one provider adapter. Use only capabilities that are actually exposed in the current session.
 4. Report the evidence level honestly: `code-shaped`, `browser-verified`, or `screenshot proof`.
+5. When the request names or mentions a browser, preview, localhost route, or running UI, use the available browser/preview skill first. Treat an explicit browser mention as the provider choice. For an existing application, preview the real route and follow the authentication guidance below; authentication is not a reason to substitute a mockup. If browser capability is unavailable, an inline explanation may supplement the work, but it does not fulfill a request to verify the real UI.
 
 ## Provider-neutral rules
 
@@ -61,13 +62,27 @@ Make progress updates one to three lines long. Show the shape of a complex plan 
 Use this workflow whenever the user asks to preview a route, UI, HTML explainer, local app, or finished visual artifact:
 
 1. Identify the exact preview target and URL. Reuse the project's existing dev server and route when one exists. If no app exists, create a small self-contained artifact under `work/show-me/` and serve it over HTTP. Never use a `data:` URL.
-2. Use the current host's native browser or preview surface. Do not substitute an external browser, a guessed tool name, or a different provider's API.
+2. Use the browser or preview provider explicitly named by the user when one is mentioned; otherwise use the current host's native browser or preview surface. Do not substitute an external browser, a guessed tool name, a different provider's API, or web search.
 3. Navigate to the target, wait for the page's meaningful ready signal, inspect the rendered result, and verify the requested route, key text, controls, layout, and relevant console errors.
 4. Take a final screenshot of the stable, user-facing state when the host supports capture. Save it under `work/show-me/`, include it in the final response with an absolute-path Markdown image link, and say what it proves.
 5. Leave the finished preview, server, or session open when the host supports persistence. Never close the deliverable just before handoff.
 6. If the host lacks browser or screenshot capability, do not fabricate browser verification or a screenshot. Return the strongest inline visual available and state the missing capability.
 
+### Authenticate to the real application
+
+Login is part of the real preview workflow. Prefer an existing authenticated tab or session in the selected browser. Reuse available shared/test credentials or existing session cookies when authorized for the target application and supported by the browser tools; use the application's normal login flow when a fresh login is needed. Do not ask the user to sign in again when usable authorized access already exists.
+
+Keep credentials and session cookies in the supported authentication/session mechanism. Never expose them in skill files, memory, source files, screenshots, logs, or chat. Do not disable authentication, forge an identity, or change access controls to make a preview work.
+
+If available authorized access is insufficient, ask the user to complete login, MFA, or account selection in the selected browser and resume the real route afterward. Report verification as pending while access is blocked. Do not replace the application with a mockup, fake data, or an alternate implementation to claim completion. Mockups remain useful when the user asks for a proposed design or concept, rather than verification of an existing application.
+
 ## Provider adapters
+
+### Named Browser Plugin
+
+- If the user explicitly mentions a browser plugin or browser tab, use that plugin's exposed native browser tools for navigation, accessibility inspection, interaction, screenshots, and tab handoff.
+- For the OpenAI bundled Browser when its tools are exposed, prefer the `mcp__playwright__browser_*` operations. Keep the deliverable tab open and do not switch to `web.run`, standalone automation, or computer-use controls.
+- If the target requires authentication, follow the shared authentication guidance above: reuse authorized sessions, cookies, or shared/test credentials through supported browser mechanisms, or sign in normally.
 
 ### Codex App
 
@@ -110,7 +125,7 @@ Use this workflow whenever the user asks to preview a route, UI, HTML explainer,
 - State what each screenshot proves in one short caption or sentence.
 - Report the exact live URL and whether the preview/tab/session was left open. Say “tab left open” only after the host's handoff/finalization operation succeeds.
 - Separate `code-shaped`, `browser-verified`, and `screenshot proof`. Source inspection alone is never browser verification.
-- If authentication blocks the target, ask the user to sign in through the current host's browser/preview and tell you when it is ready. Do not bypass login or switch browsers.
+- If authentication blocks the target, first try available authorized sessions or credentials as described above. Ask for user login assistance only when needed, keep verification pending, and resume the real application once access is ready. Preserve the selected browser/provider unless the user authorizes a change.
 
 ## Compact response shape
 
